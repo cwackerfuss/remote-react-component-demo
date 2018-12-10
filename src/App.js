@@ -1,28 +1,41 @@
-import React, { Component } from 'react';
-import logo from './logo.svg';
-import './App.css';
+import React from 'react';
+import asyncComponent from './asyncComp';
+import * as Babel from '@babel/standalone';
+import SharedComponent from './shared-component';
 
-class App extends Component {
-  render() {
-    return (
-      <div className="App">
-        <header className="App-header">
-          <img src={logo} className="App-logo" alt="logo" />
-          <p>
-            Edit <code>src/App.js</code> and save to reload.
-          </p>
-          <a
-            className="App-link"
-            href="https://reactjs.org"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Learn React
-          </a>
-        </header>
-      </div>
-    );
-  }
+function loadRemoteComponent(url) {
+  return fetch(url)
+    .then(res => res.text())
+    .then(source => {
+      var exports = {}
+      function require(name) {
+        if (name == 'react') return React
+        else if (name == 'shared-component') return SharedComponent
+        else throw `You can't use modules other than "react" or "shared-component" in remote component.`
+      }
+      const transformedSource = Babel
+        .transform(source, { presets: ['react', 'es2015'] }).code;
+
+      eval(transformedSource)
+      return transformedSource.__esModule ? exports.default : exports
+
+    })
 }
 
-export default App;
+const asyncLoadComponent = () => (
+  loadRemoteComponent('https://codepen.io/chasewackerfuss/pen/YdzaMY.babel')
+  // loadRemoteComponent('https://codepen.io/chasewackerfuss/pen/YdzaMY.js')
+);
+
+const AsyncComp = asyncComponent(asyncLoadComponent);
+
+const container = () => {
+  return (
+    <div>
+      <SharedComponent location='LOCAL' />
+      <AsyncComp />
+    </div>
+  );
+};
+
+export default container;
